@@ -157,6 +157,41 @@ bool PPMWriter::access_tensor(ITensor &tensor)
     return _iterator < _maximum;
 }
 
+MemoryWriter::MemoryWriter(float* dst, unsigned int d1, unsigned int d2, unsigned int d3, unsigned int d4)
+    : _dst(dst), _d1(d1), _d2(d2), _d3(d3), _d4(d4), _length(d1*d2*d3*d4)
+{
+}
+
+bool MemoryWriter::access_tensor(ITensor &tensor)
+{
+    //std::cout << "access_tensor() called " << std::endl;
+    if (tensor.buffer() == nullptr || _dst == nullptr) return false;
+    arm_compute::utils::map(tensor, true);
+    Window window;
+    window.use_tensor_dimensions(tensor.info()->tensor_shape(), Window::DimX);
+    // Create an iterator:
+    Iterator it(&tensor, window);
+    if (tensor.info()->data_type() == DataType::F16) {
+        //std::cout << "access_tensor() with F16 type" << std::endl;
+        execute_window_loop(window, [&](const Coordinates & id)
+            {
+            _dst[id[3] * (_d2 * _d3 * _d4) + id[2] * (_d3 * _d4)  + id[1] * _d4 + id[0]] = float(*reinterpret_cast<half*>(it.ptr()));
+            },
+            it);
+    } else {
+        //std::cout << "access_tensor() with F32 type"  << _d1 << ", " << _d2 << ", " << _d3 << ", " << _d4 << std::endl;
+        execute_window_loop(window, [&](const Coordinates & id)
+            {
+            _dst[id[3] * (_d2 * _d3 * _d4) + id[2] * (_d3 * _d4)  + id[1] * _d4 + id[0]] = *reinterpret_cast<float*>(it.ptr());
+            },
+            it);
+    }
+    //memcpy(_dst, tensor.buffer(), sizeof(float)*_length);
+    arm_compute::utils::unmap(tensor);
+
+    return true;
+}
+
 DummyAccessor::DummyAccessor(unsigned int maximum)
     : _iterator(0), _maximum(maximum)
 {
@@ -783,4 +818,41 @@ bool NumPyBinLoader::access_tensor(ITensor &tensor)
 
     _already_loaded = !_already_loaded;
     return _already_loaded;
+}
+
+SVNetTensorLoader::SVNetTensorLoader(float *weights, int d1, int d2, int d3, int d4)
+    : _weights(weights), _d1(d1), _d2(d2), _d3(d3), _d4(d4)
+    {
+}
+
+bool SVNetTensorLoader::access_tensor(ITensor &tensor)
+{
+    //std::cerr << "access_tensor() called " << std::endl;
+    if (tensor.buffer() == nullptr || _weights == nullptr)
+        return false;
+    if (!_accessed) {
+        arm_compute::utils::map(tensor, true);
+        Window window;
+        window.use_tensor_dimensions(tensor.info()->tensor_shape(), Window::DimX);
+        // Create an iterator:
+        Iterator it(&tensor, window);
+        if (tensor.info()->data_type() == DataType::F16) {
+            //std::cerr << "access_tensor() with F16 type" << std::endl;
+            execute_window_loop(window, [&](const Coordinates & id)
+                {
+                *reinterpret_cast<half*>(it.ptr()) = _weights[id[3] * (_d2 * _d3 * _d4) + id[2] * (_d3 * _d4)  + id[1] * _d4 + id[0]];
+                },
+                it);
+        } else {
+            //std::cerr << "access_tensor() with F32 type" << _d1 << ", " << _d2 << ", " << _d3 << ", " << _d4 << std::endl;
+            execute_window_loop(window, [&](const Coordinates & id)
+                {
+                *reinterpret_cast<float*>(it.ptr()) = _weights[id[3] * (_d2 * _d3 * _d4) + id[2] * (_d3 * _d4)  + id[1] * _d4 + id[0]];
+                },
+                it);
+        }
+        arm_compute::utils::unmap(tensor);
+    }
+    _accessed = ! _accessed;
+    return _accessed;
 }

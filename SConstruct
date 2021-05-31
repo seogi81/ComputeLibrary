@@ -170,7 +170,7 @@ if 'clang++' in cpp_compiler:
 elif 'armclang' in cpp_compiler:
     pass
 else:
-    env.Append(CXXFLAGS = ['-Wlogical-op','-Wnoexcept','-Wstrict-null-sentinel'])
+    env.Append(CXXFLAGS = ['-Wlogical-op','-Wstrict-null-sentinel'])
 
 if cpp_compiler == 'g++':
     # Don't strip comments that could include markers
@@ -179,14 +179,14 @@ if cpp_compiler == 'g++':
 if env['cppthreads']:
     env.Append(CPPDEFINES = [('ARM_COMPUTE_CPP_SCHEDULER', 1)])
 
-if env['openmp']:
-    if 'clang++' in cpp_compiler:
-        print( "Clang does not support OpenMP. Use scheduler=cpp.")
-        Exit(1)
-
-    env.Append(CPPDEFINES = [('ARM_COMPUTE_OPENMP_SCHEDULER', 1)])
-    env.Append(CXXFLAGS = ['-fopenmp'])
-    env.Append(LINKFLAGS = ['-fopenmp'])
+#if env['openmp']:
+#    if 'clang++' in cpp_compiler:
+#        print( "Clang does not support OpenMP. Use scheduler=cpp.")
+#        Exit(1)
+#
+#    env.Append(CPPDEFINES = [('ARM_COMPUTE_OPENMP_SCHEDULER', 1)])
+#    env.Append(CXXFLAGS = ['-fopenmp'])
+#    env.Append(LINKFLAGS = ['-fopenmp'])
 
 # Validate and define state
 if env['estate'] == 'auto':
@@ -239,31 +239,31 @@ elif 'x86' in env['arch']:
 
 # Define toolchain
 prefix = ""
-if 'x86' not in env['arch']:
-    if env['estate'] == '32':
-        if env['os'] == 'linux':
-            prefix = "arm-linux-gnueabihf-" if 'v7' in env['arch'] else "armv8l-linux-gnueabihf-"
-        elif env['os'] == 'bare_metal':
-            prefix = "arm-eabi-"
-        elif env['os'] == 'android':
-            prefix = "arm-linux-androideabi-"
-        elif env['os'] == 'tizen':
-            prefix = "armv7l-tizen-linux-gnueabi-"
-    elif env['estate'] == '64' and 'v8' in env['arch']:
-        if env['os'] == 'linux':
-            prefix = "aarch64-linux-gnu-"
-        elif env['os'] == 'bare_metal':
-            prefix = "aarch64-elf-"
-        elif env['os'] == 'android':
-            prefix = "aarch64-linux-android-"
-        elif env['os'] == 'tizen':
-            prefix = "aarch64-tizen-linux-gnu-"
+#if 'x86' not in env['arch']:
+#    if env['estate'] == '32':
+#        if env['os'] == 'linux':
+#            prefix = "arm-linux-gnueabihf-" if 'v7' in env['arch'] else "armv8l-linux-gnueabihf-"
+#        elif env['os'] == 'bare_metal':
+#            prefix = "arm-eabi-"
+#        elif env['os'] == 'android':
+#            prefix = "arm-linux-androideabi-"
+#        elif env['os'] == 'tizen':
+#            prefix = "armv7l-tizen-linux-gnueabi-"
+#    elif env['estate'] == '64' and 'v8' in env['arch']:
+#        if env['os'] == 'linux':
+#            prefix = "aarch64-linux-gnu-"
+#        elif env['os'] == 'bare_metal':
+#            prefix = "aarch64-elf-"
+#        elif env['os'] == 'android':
+#            prefix = "aarch64-linux-android-"
+#        elif env['os'] == 'tizen':
+#            prefix = "aarch64-tizen-linux-gnu-"
 
-if env['build'] == 'native':
-    prefix = ""
+#if env['build'] == 'native':
+#    prefix = ""
 
-if env["toolchain_prefix"] != "":
-    prefix = env["toolchain_prefix"]
+#if env["toolchain_prefix"] != "":
+#    prefix = env["toolchain_prefix"]
 
 compiler_prefix = prefix
 if env["compiler_prefix"] != "":

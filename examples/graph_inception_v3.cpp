@@ -27,6 +27,29 @@
 #include "utils/GraphUtils.h"
 #include "utils/Utils.h"
 
+#include <chrono>
+
+struct timer{
+    std::chrono::steady_clock::time_point start;
+    std::chrono::steady_clock::time_point end;
+    double_t elapse;
+
+    timer():start(std::chrono::steady_clock::now()), end(std::chrono::steady_clock::now()), elapse(0.0) {}
+};
+
+inline void tic(timer& tm)
+{
+    tm.start = std::chrono::steady_clock::now();
+}
+
+inline double_t toc(timer& tm)
+{
+    tm.end = std::chrono::steady_clock::now();
+    tm.elapse = std::chrono::duration_cast<std::chrono::duration<double_t>>(tm.end - tm.start).count();
+    return tm.elapse;
+}
+
+
 using namespace arm_compute::utils;
 using namespace arm_compute::graph::frontend;
 using namespace arm_compute::graph_utils;
@@ -41,6 +64,8 @@ public:
     }
     bool do_setup(int argc, char **argv) override
     {
+        timer t;
+        tic(t);
         // Parse arguments
         cmd_parser.parse(argc, argv);
         cmd_parser.validate();
@@ -60,6 +85,7 @@ public:
 
         // Get trainable parameters data path
         std::string data_path = common_params.data_path;
+        std::cout << "data_path:" << data_path << std::endl;
 
         // Create a preprocessor object
         std::unique_ptr<IPreprocessor> preprocessor = std::make_unique<TFPreproccessor>();
@@ -206,12 +232,20 @@ public:
 
         graph.finalize(common_params.target, config);
 
+        std::cerr << "do_setup()" << toc(t) << std::endl;
+
+
         return true;
     }
 
     void do_run() override
     {
-        graph.run();
+        timer t;
+        for(int32_t i = 0; i < 100; i++) {
+            tic(t);
+            graph.run();
+            std::cerr << "do_run()" << toc(t) << std::endl;
+        }
     }
 
 private:

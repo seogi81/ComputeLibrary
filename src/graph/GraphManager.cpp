@@ -109,28 +109,57 @@ void GraphManager::finalize_graph(Graph &graph, GraphContext &ctx, PassManager &
     ARM_COMPUTE_LOG_GRAPH_VERBOSE("Created workload for graph with ID : " << graph.id() << std::endl);
 }
 
+struct timer{
+    std::chrono::steady_clock::time_point start;
+    std::chrono::steady_clock::time_point end;
+    double_t elapse;
+
+    timer():start(std::chrono::steady_clock::now()), end(std::chrono::steady_clock::now()), elapse(0.0) {}
+};
+
+#include <chrono>
+
+inline void tic(timer& tm)
+{
+    tm.start = std::chrono::steady_clock::now();
+}
+
+inline double_t toc(timer& tm)
+{
+    tm.end = std::chrono::steady_clock::now();
+    tm.elapse = std::chrono::duration_cast<std::chrono::duration<double_t>>(tm.end - tm.start).count();
+    return tm.elapse;
+}
+
 void GraphManager::execute_graph(Graph &graph)
 {
     // Check if graph is finalized
     auto it = _workloads.find(graph.id());
     ARM_COMPUTE_ERROR_ON_MSG(it == std::end(_workloads), "Graph is not registered!");
+    timer t;
 
     while(true)
     {
         // Call input accessors
+        tic(t);
         if(!detail::call_all_input_node_accessors(it->second))
         {
             return;
         }
+        std::cerr << "input: " << toc(t) << std::endl;
 
         // Run graph
+        tic(t);
         detail::call_all_tasks(it->second);
+        std::cerr << "task: " << toc(t) << std::endl;
 
+        tic(t);
         // Call output accessors
         if(!detail::call_all_output_node_accessors(it->second))
         {
             return;
         }
+        std::cerr << "output: " << toc(t) << std::endl;
     }
 }
 

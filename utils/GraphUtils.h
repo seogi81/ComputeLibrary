@@ -122,6 +122,28 @@ private:
     unsigned int      _maximum;
 };
 
+/** Memory writer class */
+class MemoryWriter : public graph::ITensorAccessor
+{
+public:
+    /** Constructor
+     *
+     * @param[in] dst     Destination address
+     * @param[in] length  Number of elements
+     */
+    MemoryWriter(float* dst, unsigned int d1, unsigned int d2, unsigned int d3, unsigned d4);
+    /** Allows instances to move constructed */
+    MemoryWriter(MemoryWriter &&) = default;
+
+    // Inherited methods overriden:
+    bool access_tensor(ITensor &tensor) override;
+
+private:
+    float* _dst;
+    const unsigned int _d1, _d2, _d3, _d4;
+    const unsigned int _length;
+};
+
 /** Dummy accessor class */
 class DummyAccessor final : public graph::ITensorAccessor
 {
@@ -449,6 +471,32 @@ private:
     const DataLayout  _file_layout;
 };
 
+/** SVNet Tensor loader class*/
+class SVNetTensorLoader final : public graph::ITensorAccessor
+{
+    public:
+    /** Default Constructor
+     *
+     * @param[in] filename    Binary file name
+     * @param[in] file_layout (Optional) Layout of the numpy tensor data. Defaults to NCHW
+     */
+    SVNetTensorLoader(float* weights, int d1, int d2, int d3, int d4);
+    /** Allows instances to move constructed */
+    SVNetTensorLoader(SVNetTensorLoader &&) = default;
+
+	SVNetTensorLoader(const SVNetTensorLoader &) = delete;
+    SVNetTensorLoader& operator = (const SVNetTensorLoader &) = delete;
+
+    // Inherited methods overriden:
+    bool access_tensor(ITensor &tensor) override;
+
+    private:
+    const float		*_weights;
+    const int		_d1, _d2, _d3, _d4;
+    bool      _accessed = false;
+};
+
+
 /** Generates appropriate random accessor
  *
  * @param[in] lower Lower random values bound
@@ -651,6 +699,14 @@ inline std::unique_ptr<graph::ITensorAccessor> get_save_npy_output_accessor(cons
 inline std::unique_ptr<graph::ITensorAccessor> get_print_output_accessor(std::ostream &output_stream = std::cout)
 {
     return std::make_unique<PrintAccessor>(output_stream);
+}
+
+inline std::unique_ptr<arm_compute::graph::ITensorAccessor> get_svnet_tensor_accessor(float* data, int d1, int d2, int d3, int d4) {
+      return std::make_unique<SVNetTensorLoader>(data, d1, d2, d3, d4);
+}
+
+inline std::unique_ptr<arm_compute::graph::ITensorAccessor> get_svnet_output_accessor(float* data, int d1, int d2, int d3, int d4) {
+      return std::make_unique<MemoryWriter>(data, d1, d2, d3, d4);
 }
 
 /** Permutes a given tensor shape given the input and output data layout
